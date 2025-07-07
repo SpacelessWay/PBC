@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Переводы</title>
+  <style>
+    body {
+      font-family: Arial;
+      padding: 40px;
+      background-color: #f9f9f9;
+    }
+
+    .container {
+      max-width: 500px;
+      margin: auto;
+      padding: 30px;
+      border: 1px solid #ccc;
+      background-color: white;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+
+    h2 {
+      text-align: center;
+    }
+
+    label {
+      display: block;
+      margin-top: 15px;
+    }
+
+    input {
+      width: 100%;
+      padding: 8px;
+      margin-top: 5px;
+    }
+
+    button {
+      margin-top: 20px;
+      width: 100%;
+      padding: 10px;
+      background-color: #007BFF;
+      color: white;
+      border: none;
+      cursor: pointer;
+      font-size: 16px;
+    }
+
+    .error {
+      color: red;
+      margin-top: 10px;
+      text-align: center;
+    }
+
+    table {
+      margin-top: 20px;
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    th, td {
+      border: 1px solid #ddd;
+      padding: 8px;
+      text-align: left;
+    }
+
+    .balance-cell {
+      font-weight: bold;
+    }
+
+    .actions {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .header {
+      display: flex;
+      justify-content: flex-end; /* Выравниваем кнопки по правому краю */
+      align-items: center;
+      gap: 10px; /* Расстояние между кнопками */
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <!-- Верхняя панель с кнопками -->
+  <div class="header" style="text-align: right; margin-bottom: 20px;">
+    <button onclick="goToProfile()" style="margin-left: 10px;">Аккаунт</button>
+    <button onclick="goToScores()" style="margin-left: 10px;">Счета</button>
+    <button onclick="logout()" style="margin-left: 10px; background-color: #6c757d; color: white;">Выход</button>
+  </div>
+  <h2>Перевод средств</h2>
+
+  <!-- Сообщение об ошибке -->
+  <div id="error" class="error"></div>
+
+  <!-- Форма перевода -->
+  <label for="fromScore">Счёт отправителя:</label>
+  <input type="text" id="fromScore" placeholder="ACC123456">
+
+  <label for="toScore">Счёт получателя:</label>
+  <input type="text" id="toScore" placeholder="ACC789012">
+
+  <label for="amount">Сумма перевода:</label>
+  <input type="number" id="amount" placeholder="Введите сумму" min="0">
+
+  <button onclick="performTransfer()">Перевести</button>
+</div>
+
+<script>
+  async function performTransfer() {
+    const fromScore = document.getElementById('fromScore').value;
+    const toScore = document.getElementById('toScore').value;
+    const amountInput = document.getElementById('amount').value;
+    const errorDiv = document.getElementById('error');
+    errorDiv.textContent = '';
+
+    if (!fromScore || !toScore || !amountInput) {
+      alert("Все поля обязательны");
+      return;
+    }
+
+    const amount = parseFloat(amountInput);
+    if (amount <= 0) {
+      alert("Сумма должна быть больше нуля");
+      return;
+    }
+
+    try {
+      // Проверяем, существует ли счёт получателя
+      const checkRes = await fetch(`/transfers/check-score?scoreNumber=${encodeURIComponent(toScore)}`);
+      const scoreExists = await checkRes.json();
+
+      if (!scoreExists) {
+        alert("Счёт получателя не найден");
+        return;
+      }
+
+      // Выполняем перевод
+      const response = await fetch('/transfers/perform', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fromAccount: fromAccount,
+          toAccount: toAccount,
+          amountKopecks: amountKopecks
+        })
+      });
+
+      if (response.ok) {
+        alert("Перевод выполнен успешно");
+        document.getElementById('amount').value = '';
+      } else {
+        const errorText = await response.text();
+        errorDiv.textContent = errorText;
+      }
+    } catch (e) {
+      errorDiv.textContent = "Ошибка при выполнении перевода";
+    }
+  }
+  function goToProfile() {
+    window.location.href = '/profile.html';
+  }
+
+  function goToScores() {
+    window.location.href = '/score.html';
+  }
+
+  function logout() {
+    localStorage.removeItem('userId');
+    window.location.href = '/';
+  }
+</script>
+
+</body>
+</html>
