@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Профиль</title>
+  <style>
+    body {
+      font-family: Arial;
+      padding: 40px;
+      background-color: #f9f9f9;
+    }
+
+    .container {
+      max-width: 600px;
+      margin: auto;
+      padding: 30px;
+      border: 1px solid #ccc;
+      background-color: white;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+
+    h2 {
+      text-align: center;
+    }
+
+    label {
+      display: block;
+      margin-top: 15px;
+    }
+
+    input {
+      width: 100%;
+      padding: 8px;
+      margin-top: 5px;
+    }
+
+    button {
+      width: 100%;
+      padding: 10px;
+      font-size: 16px;
+      cursor: pointer;
+      border: none;
+      margin-top: 10px;
+    }
+
+    .header {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .error {
+      color: red;
+      margin-top: 10px;
+      text-align: center;
+    }
+
+    .success {
+      color: green;
+      margin-top: 10px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <!-- Верхняя панель с кнопками -->
+  <div class="header">
+    <button onclick="goToAccounts()">Счета</button>
+    <button onclick="goToTransfer()">Перевод</button>
+    <button onclick="logout()" style="background-color: #6c757d; color: white;">Выход</button>
+  </div>
+
+  <h2>Профиль пользователя</h2>
+
+  <!-- Сообщение об ошибке или успехе -->
+  <div id="error" class="error"></div>
+  <div id="success" class="success"></div>
+
+  <!-- Поля профиля -->
+  <label for="firstName">Имя</label>
+  <input type="text" id="firstName" />
+
+  <label for="lastName">Фамилия</label>
+  <input type="text" id="lastName" />
+
+  <label for="email">Email</label>
+  <input type="email" id="email" />
+
+  <label for="phone">Телефон</label>
+  <input type="text" id="phone" />
+
+  <button onclick="saveProfile()">Сохранить изменения</button>
+</div>
+
+<script>
+  const token = localStorage.getItem('auth_token');
+  if (!token) {
+    alert("Необходима авторизация");
+    window.location.href = '/login.html';
+  }
+
+  let userId = getUUIDFromToken() || new URLSearchParams(window.location.search).get('userId');
+
+  if (!userId) {
+    document.getElementById('error').textContent = "Пользователь не указан";
+    throw new Error("userId не найден");
+  }
+
+  // Простой парсинг JWT для получения uuid из payload
+  function getUUIDFromToken() {
+    try {
+      const payloadBase64 = token.split('.')[1];
+      const decodedJson = atob(payloadBase64);
+      const decoded = JSON.parse(decodedJson);
+      return decoded.uuid;
+    } catch (e) {
+      console.warn("Ошибка чтения uuid из токена");
+      return null;
+    }
+  }
+
+  async function loadUserProfile() {
+    try {
+      const res = await fetch('/api/user/profile', {
+        headers: {
+          'Authorization': 'Bearer ' + token
+        }
+      });
+
+      if (!res.ok) {
+        throw new Error("Ошибка загрузки данных");
+      }
+
+      const user = await res.json();
+
+      document.getElementById('firstName').value = user.firstName || '';
+      document.getElementById('lastName').value = user.lastName || '';
+      document.getElementById('email').value = user.email || '';
+      document.getElementById('phone').value = user.phone || '';
+    } catch (e) {
+      document.getElementById('error').textContent = 'Не удалось загрузить профиль';
+    }
+  }
+
+  async function saveProfile() {
+    const firstName = document.getElementById('firstName').value.trim();
+    const lastName = document.getElementById('lastName').value.trim();
+    const email = document.getElementById('email').value.trim();
+    const phone = document.getElementById('phone').value.trim();
+
+    if (!firstName || !lastName || !email || !phone) {
+      document.getElementById('error').textContent = 'Все поля обязательны к заполнению';
+      document.getElementById('success').textContent = '';
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/user/update', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + token
+        },
+        body: JSON.stringify({
+          uuid: userId,
+          firstName,
+          lastName,
+          email,
+          phone
+        })
+      });
+
+      if (res.ok) {
+        document.getElementById('success').textContent = 'Данные успешно обновлены!';
+        document.getElementById('error').textContent = '';
+      } else {
+        const errorData = await res.json();
+        document.getElementById('error').textContent = errorData.message || 'Ошибка при сохранении';
+        document.getElementById('success').textContent = '';
+      }
+    } catch (e) {
+      document.getElementById('error').textContent = 'Ошибка сети при сохранении';
+    }
+  }
+
+  function goToAccounts() {
+    window.location.href = '/accounts.html';
+  }
+
+  function goToTransfer() {
+    window.location.href = '/transfer.html';
+  }
+
+  function logout() {
+    localStorage.removeItem('auth_token');
+    window.location.href = '/login.html';
+  }
+
+  // Загрузка профиля при старте
+  window.onload = () => {
+    document.getElementById('error').textContent = '';
+    document.getElementById('success').textContent = '';
+    loadUserProfile();
+  };
+</script>
+
+</body>
+</html>
