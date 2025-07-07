@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Регистрация</title>
+  <style>
+    body { font-family: Arial; padding: 40px; }
+    .container { max-width: 400px; margin: auto; padding: 30px; border: 1px solid #ccc; }
+    label { display: block; margin-top: 15px; }
+    input { width: 100%; padding: 8px; }
+    button { margin-top: 20px; width: 100%; padding: 10px; background-color: #28a745; color: white; border: none; cursor: pointer; }
+    .error { color: red; margin-top: 10px; }
+    .success { color: green; margin-top: 10px; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <h2>Регистрация</h2>
+
+  <!-- Ошибки -->
+  <div id="error" class="error"></div>
+  <div id="success" class="success"></div>
+
+  <!-- Форма -->
+  <form id="registerForm">
+    <label for="login">Логин:</label>
+    <input type="text" id="login" name="login" required>
+
+    <label for="password">Пароль (минимум 6 символов):</label>
+    <input type="password" id="password" name="password" required>
+
+    <label for="firstName">Имя:</label>
+    <input type="text" id="firstName" name="firstName" required>
+
+    <label for="lastName">Фамилия:</label>
+    <input type="text" id="lastName" name="lastName" required>
+
+    <label for="email">Email:</label>
+    <input type="email" id="email" name="email" required>
+
+    <label for="phone">Телефон:</label>
+    <input type="tel" id="phone" name="phone" required>
+
+    <button type="submit">Зарегистрироваться</button>
+  </form>
+
+  <p style="margin-top: 20px;">
+    Уже есть аккаунт? <a href="/login.html">Войти</a>
+  </p>
+</div>
+
+<script>
+  const form = document.getElementById('registerForm');
+  const errorDiv = document.getElementById('error');
+  const successDiv = document.getElementById('success');
+
+  form.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    errorDiv.textContent = '';
+    successDiv.textContent = '';
+
+    const login = document.getElementById('login').value.trim();
+    const password = document.getElementById('password').value.trim();
+    const firstName = document.getElementById('firstName').value.trim();
+    const lastName = document.getElementById('lastName').value.trim();
+    const email = document.getElementById('email').value.trim();
+    const phone = document.getElementById('phone').value.trim();
+
+    if (password.length < 6) {
+      errorDiv.textContent = 'Пароль должен быть минимум 6 символов';
+      return;
+    }
+
+    const response = await fetch('/auth/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ login, password, firstName, lastName, email, phone })
+    });
+
+    if (response.ok) {
+      successDiv.textContent = 'Регистрация прошла успешно!';
+      setTimeout(() => {
+        window.location.href = '/login.html';
+      }, 2000);
+    } else if (response.status === 400) {
+      const data = await response.json();
+      errorDiv.textContent = data.message || 'Ошибка регистрации';
+    } else {
+      errorDiv.textContent = 'Произошла ошибка сервера';
+    }
+  });
+</script>
+</body>
+</html>
