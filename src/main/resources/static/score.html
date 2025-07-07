@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Счета</title>
+  <style>
+    body {
+      font-family: Arial;
+      padding: 40px;
+      background-color: #f9f9f9;
+    }
+
+    .container {
+      max-width: 600px;
+      margin: auto;
+      padding: 30px;
+      border: 1px solid #ccc;
+      background-color: white;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+
+    h2 {
+      text-align: center;
+    }
+
+    label {
+      display: block;
+      margin-top: 15px;
+    }
+
+    input {
+      width: 100%;
+      padding: 8px;
+      margin-top: 5px;
+    }
+
+    button {
+      width: 100%;
+      padding: 10px;
+      font-size: 16px;
+      cursor: pointer;
+      border: none;
+      margin-top: 10px;
+    }
+
+    table {
+      margin-top: 20px;
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    th, td {
+      border: 1px solid #ddd;
+      padding: 8px;
+      text-align: left;
+    }
+
+    .close-btn {
+      background-color: #dc3545;
+      color: white;
+      padding: 5px 10px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+
+    .actions {
+      display: flex;
+      gap: 10px;
+    }
+
+    .error {
+      color: red;
+      margin-top: 10px;
+      text-align: center;
+    }
+
+    .balance-cell {
+      font-weight: bold;
+    }
+
+    .header {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <!-- Верхняя панель с кнопками -->
+  <div class="header" style="text-align: right;">
+    <button onclick="goToProfile()">Аккаунт</button>
+    <button onclick="goToTransfer()">Перевод</button>
+    <button onclick="logout()" style="background-color: #6c757d; color: white;">Выход</button>
+  </div>
+
+  <h2>Ваши счета</h2>
+
+  <!-- Сообщение об ошибке -->
+  <div id="error" class="error"></div>
+
+  <!-- Список счетов -->
+  <table id="accountsTable">
+    <thead>
+    <tr>
+      <th>Номер счёта</th>
+      <th>Баланс (руб.)</th>
+      <th>Статус</th>
+      <th>Действие</th>
+    </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <hr>
+
+  <h3>Открыть новый счёт</h3>
+  <label for="initBalance">Начальный баланс:</label>
+  <input type="number" id="initBalance" placeholder="Введите сумму" min="0">
+
+  <button onclick="openNewAccount()">Открыть счёт</button>
+</div>
+
+<script>
+  const token = localStorage.getItem('auth_token');
+  if (!token) {
+    alert("Необходима авторизация");
+    window.location.href = '/login.html';
+  }
+
+  async function loadAccounts() {
+    try {
+      const res = await fetch('/scores/list', {
+        headers: {
+          'Authorization': 'Bearer ' + token
+        }
+      });
+
+      if (!res.ok) {
+        throw new Error('Ошибка при получении списка счетов');
+      }
+
+      const accounts = await res.json();
+      const tbody = document.querySelector('#accountsTable tbody');
+      tbody.innerHTML = '';
+
+      if (accounts.length === 0) {
+        const row = document.createElement('tr');
+        row.innerHTML = `<td colspan="4" style="text-align:center;">Счета не найдены</td>`;
+        tbody.appendChild(row);
+        return;
+      }
+
+      accounts.forEach(acc => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${acc.scoreNumber}</td>
+          <td class="balance-cell">${acc.balance}</td>
+          <td>${acc.active ? 'Активный' : 'Закрыт'}</td>
+          <td>
+            <button class="close-btn" onclick="closeAccount('${acc.scoreNumber}')">Закрыть</button>
+          </td>
+        `;
+        tbody.appendChild(row);
+      });
+    } catch (e) {
+      document.getElementById('error').textContent = 'Ошибка загрузки счетов';
+    }
+  }
+
+  async function openNewAccount() {
+    const initBalInput = document.getElementById('initBalance');
+    const initBal = initBalInput.value;
+
+    if (!initBal || initBal < 0) {
+      alert("Укажите корректную сумму");
+      return;
+    }
+
+    const response = await fetch('/scores/open', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + token
+      },
+      body: JSON.stringify({
+        balance: parseFloat(initBal)
+      })
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      initBalInput.value = '';
+      alert(`Счёт ${data.accountNumber} открыт`);
+      loadAccounts();
+    } else {
+      const errorText = await response.text();
+      try {
+        const json = JSON.parse(errorText);
+        document.getElementById('error').textContent = json.message || 'Ошибка открытия счёта';
+      } catch {
+        document.getElementById('error').textContent = errorText;
+      }
+    }
+  }
+
+  async function closeAccount(scoreNumber) {
+    const confirmation = confirm(`Вы уверены, что хотите закрыть счёт ${scoreNumber}?`);
+    if (!confirmation) return;
+
+    const response = await fetch('/scores/close', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + token
+      },
+      body: JSON.stringify({ scoreNumber: scoreNumber })
+    });
+
+    if (response.ok) {
+      alert("Счёт закрыт");
+      loadAccounts();
+    } else {
+      const errorText = await response.text();
+      try {
+        const json = JSON.parse(errorText);
+        document.getElementById('error').textContent = json.message || 'Ошибка закрытия счёта';
+      } catch {
+        document.getElementById('error').textContent = errorText;
+      }
+    }
+  }
+
+  function goToProfile() {
+    window.location.href = '/profile.html';
+  }
+
+  function goToTransfer() {
+    window.location.href = '/transfer.html';
+  }
+
+  function logout() {
+    localStorage.removeItem('auth_token');
+    window.location.href = '/login.html';
+  }
+
+  // Загружаем счета при старте
+  window.onload = () => {
+    document.getElementById('error').textContent = '';
+    loadAccounts();
+  };
+</script>
+
+</body>
+</html>
