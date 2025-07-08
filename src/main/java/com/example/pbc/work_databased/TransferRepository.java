@@ -14,7 +14,7 @@ public class TransferRepository {
         this.scoreRepository = scoreRepository;
     }
 
-    public void executeTransfer(String fromScoreNumber, String toScoreNumber, float amount) {
+    public void executeTransfer(String fromScoreNumber, String toScoreNumber, Long amount,Long idFrom,Long idTo) {
         // Проверяем существование счёта
         if (!scoreRepository.scoreExists(fromScoreNumber)) {
             throw new IllegalArgumentException("Счёт отправителя не найден");
@@ -24,7 +24,7 @@ public class TransferRepository {
         }
 
         // Обновляем балансы
-        jdbcTemplate.update("UPDATE scores SET balance = balance - ? WHERE sore_number = ?",
+        jdbcTemplate.update("UPDATE scores SET balance = balance - ? WHERE score_number = ?",
                 amount, fromScoreNumber);
 
         jdbcTemplate.update("UPDATE scores SET balance = balance + ? WHERE score_number = ?",
@@ -33,7 +33,16 @@ public class TransferRepository {
         String uuid = UUID.randomUUID().toString();
 
         // Сохраняем историю перевода
-        jdbcTemplate.update("INSERT INTO transfers (uuid,from_score_id, to_score_id, amount) VALUES (?,?, ?, ?)",
-                uuid,fromScoreNumber, toScoreNumber, amount);
+        jdbcTemplate.update("INSERT INTO transfers (transfer_uuid, from_score_id, to_score_id, amount) VALUES (?, ?, ?, ?)",
+                uuid,idFrom, idTo, amount);
+    }
+    /**
+     * Проверяет, принадлежит ли счёт пользователю
+     */
+    public boolean isScoreBelongsToUser(String scoreNumber, String userUuid) {
+        Integer count = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM scores WHERE score_number = ? AND user_uuid = ?",
+                Integer.class, scoreNumber, userUuid);
+        return count != null && count > 0;
     }
 }
