@@ -45,6 +45,10 @@
       font-size: 16px;
     }
 
+    button:hover {
+      background-color: #0056b3;
+    }
+
     .error {
       color: red;
       margin-top: 10px;
@@ -67,16 +71,12 @@
       font-weight: bold;
     }
 
-    .actions {
-      display: flex;
-      justify-content: space-between;
-      gap: 10px;
-    }
     .header {
       display: flex;
-      justify-content: flex-end; /* Выравниваем кнопки по правому краю */
+      justify-content: flex-end;
       align-items: center;
-      gap: 10px; /* Расстояние между кнопками */
+      gap: 10px;
+      margin-bottom: 20px;
     }
   </style>
 </head>
@@ -84,11 +84,12 @@
 
 <div class="container">
   <!-- Верхняя панель с кнопками -->
-  <div class="header" style="text-align: right; margin-bottom: 20px;">
-    <button onclick="goToProfile()" style="margin-left: 10px;">Аккаунт</button>
-    <button onclick="goToScores()" style="margin-left: 10px;">Счета</button>
-    <button onclick="logout()" style="margin-left: 10px; background-color: #6c757d; color: white;">Выход</button>
+  <div class="header">
+    <!--<button onclick="goToProfile()">Аккаунт</button>-->
+    <button onclick="goToScores()">Счета</button>
+    <button onclick="logout()" style="background-color: #6c757d; color: white;">Выход</button>
   </div>
+
   <h2>Перевод средств</h2>
 
   <!-- Сообщение об ошибке -->
@@ -108,42 +109,79 @@
 </div>
 
 <script>
+  const token = localStorage.getItem('auth_token');
+  if (!token) {
+    alert("Необходима авторизация");
+    window.location.href = '/login.html';
+  }
+
   async function performTransfer() {
-    const fromScore = document.getElementById('fromScore').value;
-    const toScore = document.getElementById('toScore').value;
-    const amountInput = document.getElementById('amount').value;
+    const fromScore = document.getElementById('fromScore').value.trim();
+    const toScore = document.getElementById('toScore').value.trim();
+    const amountInput = document.getElementById('amount').value.trim();
     const errorDiv = document.getElementById('error');
     errorDiv.textContent = '';
 
     if (!fromScore || !toScore || !amountInput) {
-      alert("Все поля обязательны");
+      errorDiv.textContent = "Все поля обязательны";
       return;
     }
 
-    const amount = parseFloat(amountInput);
-    if (amount <= 0) {
-      alert("Сумма должна быть больше нуля");
+    const amount = Math.round(parseFloat(amountInput)*100);
+    if (isNaN(amount) || amount <= 0) {
+      errorDiv.textContent = "Сумма должна быть положительным числом";
       return;
     }
 
     try {
       // Проверяем, существует ли счёт получателя
-      const checkRes = await fetch(`/transfers/check-score?scoreNumber=${encodeURIComponent(toScore)}`);
-      const scoreExists = await checkRes.json();
+      const checkRes = await fetch('/transfers/check-score', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + token
+        },
+        body: JSON.stringify({
+          fromScoreNumber: fromScore,
+          toScoreNumber: toScore,
+          amount: amount
+        })
+      });
 
-      if (!scoreExists) {
-        alert("Счёт получателя не найден");
+      if (!checkRes.ok) {
+        const errorData = await checkRes.json().catch(() => ({ error: "Ошибка проверки" }));
+        errorDiv.textContent = errorData.error || "Не удалось проверить возможность перевода";
+        return;
+      }
+
+      const result = await checkRes.json();
+
+      if (!result.from_score_exists) {
+        errorDiv.textContent = "Счёт отправителя не существует или вы не владеете им";
+        return;
+      }
+
+      if (!result.to_score_exists) {
+        errorDiv.textContent = "Счёт получателя не найден";
+        return;
+      }
+
+      if (!result.possible) {
+        errorDiv.textContent = "Недостаточно средств на счёте для перевода";
         return;
       }
 
       // Выполняем перевод
       const response = await fetch('/transfers/perform', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + token
+        },
         body: JSON.stringify({
-          fromAccount: fromAccount,
-          toAccount: toAccount,
-          amountKopecks: amountKopecks
+          fromScoreNumber: fromScore,
+          toScoreNumber: toScore,
+          amount: amount
         })
       });
 
@@ -151,13 +189,15 @@
         alert("Перевод выполнен успешно");
         document.getElementById('amount').value = '';
       } else {
-        const errorText = await response.text();
-        errorDiv.textContent = errorText;
+        const errorData = await response.json().catch(() => ({ message: "Неизвестная ошибка" }));
+        errorDiv.textContent = errorData.message || "Ошибка выполнения перевода";
       }
     } catch (e) {
-      errorDiv.textContent = "Ошибка при выполнении перевода";
+      console.error(e);
+      errorDiv.textContent = "Ошибка сети или сервера";
     }
   }
+
   function goToProfile() {
     window.location.href = '/profile.html';
   }
@@ -167,8 +207,8 @@
   }
 
   function logout() {
-    localStorage.removeItem('userId');
-    window.location.href = '/';
+    localStorage.removeItem('auth_token');
+    window.location.href = '/login.html';
   }
 </script>
 
