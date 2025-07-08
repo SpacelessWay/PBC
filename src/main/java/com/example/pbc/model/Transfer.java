@@ -1,16 +1,23 @@
 package com.example.pbc.model;
 
 public class Transfer {
-    private Long id;
-    private String fromAccountNumber;
-    private String toAccountNumber;
-    private Long amountKopecks;
+    private String fromScoreNumber;
+    private String toScoreNumber;
+    private Long amount;
 
-    public Transfer(String fromAccountNumber, String toAccountNumber, Long amountKopecks) {
-        this.fromAccountNumber = fromAccountNumber;
-        this.toAccountNumber = toAccountNumber;
-        this.amountKopecks = amountKopecks;
+    public Transfer(String fromScoreNumber, String toScoreNumber, Long amount) {
+        this.fromScoreNumber = fromScoreNumber;
+        this.toScoreNumber = toScoreNumber;
+        this.amount = amount;
     }
 
-    // геттеры
+    public String getFromScoreNumber(){
+        return fromScoreNumber;
+    }
+    public String getToScoreNumber(){
+        return toScoreNumber;
+    }
+    public Long getAmount(){
+        return amount;
+    }
 }
