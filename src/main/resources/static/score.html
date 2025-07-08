@@ -92,7 +92,7 @@
 <div class="container">
   <!-- Верхняя панель с кнопками -->
   <div class="header" style="text-align: right;">
-    <button onclick="goToProfile()">Аккаунт</button>
+    <!--<button onclick="goToProfile()">Аккаунт</button>-->
     <button onclick="goToTransfer()">Перевод</button>
     <button onclick="logout()" style="background-color: #6c757d; color: white;">Выход</button>
   </div>
@@ -126,7 +126,9 @@
 
 <script>
   const token = localStorage.getItem('auth_token');
-  if (!token) {
+  const userUuid = localStorage.getItem('user_uuid');
+
+  if (!token || !userUuid) {
     alert("Необходима авторизация");
     window.location.href = '/login.html';
   }
@@ -158,12 +160,9 @@
         const row = document.createElement('tr');
         row.innerHTML = `
           <td>${acc.scoreNumber}</td>
-          <td class="balance-cell">${acc.balance}</td>
-          <td>${acc.active ? 'Активный' : 'Закрыт'}</td>
-          <td>
-            <button class="close-btn" onclick="closeAccount('${acc.scoreNumber}')">Закрыть</button>
-          </td>
-        `;
+          <td class="balance-cell">${acc.balance/100}</td>
+          <td>${acc.active ? 'Закрыт' : 'Активный'}</td>
+          <td><button onclick="closeAccount('${acc.scoreNumber}')">Закрыть</button></td>`;
         tbody.appendChild(row);
       });
     } catch (e) {
@@ -187,15 +186,16 @@
         'Authorization': 'Bearer ' + token
       },
       body: JSON.stringify({
-        balance: parseFloat(initBal)
+        balance: Math.round(parseFloat(initBal)*100)
       })
     });
 
     if (response.ok) {
-      const data = await response.json();
-      initBalInput.value = '';
-      alert(`Счёт ${data.accountNumber} открыт`);
-      loadAccounts();
+      const text = await response.text(); // Получаем как обычный текст
+      console.log("Ответ от сервера:", text); // Смотри, что приходит
+
+        alert(`Счёт ${text} открыт`);
+        loadAccounts();
     } else {
       const errorText = await response.text();
       try {
@@ -244,6 +244,7 @@
 
   function logout() {
     localStorage.removeItem('auth_token');
+    localStorage.removeItem('user_uuid');
     window.location.href = '/login.html';
   }
 
