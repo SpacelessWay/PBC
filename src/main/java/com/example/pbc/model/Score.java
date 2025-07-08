@@ -6,13 +6,13 @@ public class Score {
     private Long id;
     private Long userId;
     private String scoreNumber;
-    private float balance;
+    private Long balance;
     private boolean active;
     private LocalDateTime createdAt;
     private LocalDateTime closedAt;
 
     // Конструктор, геттеры
-    public Score(Long id, Long userId, String scoreNumber, float balance, boolean active) {
+    public Score(Long id, Long userId, String scoreNumber, Long balance, boolean active) {
         this.id = id;
         this.userId = userId;
         this.scoreNumber = scoreNumber;
@@ -20,13 +20,16 @@ public class Score {
         this.active = active;
         this.createdAt = LocalDateTime.now();
     }
+    public Long getId(){
+        return id;
+    }
     public Long getUserId(){
         return userId;
     }
     public String getScoreNumber(){
         return scoreNumber;
     }
-    public float getBalance(){
+    public Long getBalance(){
         return balance;
     }
     public boolean getStatus(){
