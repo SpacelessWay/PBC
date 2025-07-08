@@ -54,31 +54,27 @@
     try {
       const response = await fetch('/auth/login', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ login, password })
       });
 
-      if (response.ok) {
-        const data = await response.json(); // Ожидаем ответ с токеном и uuid
-
-        if (data.token && data.uuid) {
-          localStorage.setItem('auth_token', data.token); // сохраняем токен
-          window.location.href = `/score.html?uuid=${data.uuid}`; // перенаправление
-        } else {
-          errorDiv.textContent = 'Неверный формат ответа от сервера';
-        }
-
-      } else {
+      if (!response.ok) {
         const text = await response.text();
         try {
           const json = JSON.parse(text);
           errorDiv.textContent = json.message || 'Ошибка авторизации';
-        } catch (e) {
-          errorDiv.textContent = text;
+        } catch {
+          errorDiv.textContent = text || 'Неизвестная ошибка';
         }
+        return;
       }
+
+      const data = await response.json(); // предположим, что в ответе: { uuid, token }
+
+      localStorage.setItem('auth_token', data.token);
+      localStorage.setItem('user_uuid', data.uuid); // сохраним uuid
+
+      window.location.href = '/score.html';
 
     } catch (err) {
       console.error("Ошибка сети:", err);
