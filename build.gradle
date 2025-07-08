@@ -55,8 +55,11 @@ dependencies {
 
     // --- Тестирование ---
     testImplementation 'org.springframework.boot:spring-boot-starter-test' // Основные тестовые библиотеки
-    testImplementation 'org.springframework.restdocs:spring-restdocs-mockmvc' // Генерация документации API
-    testRuntimeOnly 'org.junit.platform:junit-platform-launcher' // Поддержка JUnit Jupiter
+    testImplementation 'org.mockito:mockito-core'
+    testImplementation 'org.mockito:mockito-junit-jupiter'
+    testImplementation 'org.springframework:spring-test'
+    testImplementation 'org.springframework.security:spring-security-test'
+
 
 
 }
