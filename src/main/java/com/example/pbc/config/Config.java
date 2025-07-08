@@ -50,14 +50,6 @@ public class Config {
     }
 
     @Bean
-    public Service ServiceRunner(DatabaseManager dataManager) {
-        return new Service(dataManager);
-    }
-    @Bean
-    public StartupRunner startupRunner(Service service) {
-        return new StartupRunner(service);
-    }
-    @Bean
     public Logging logging() {
         return new Logging();
     }
@@ -87,6 +79,7 @@ public class Config {
     public ScoreService scoreService(ScoreRepository scoreRepository) {
         return new ScoreService(scoreRepository);
     }
+
     //переводы
     @Bean
     public TransferRepository transferRepository(JdbcTemplate jdbcTemplate, ScoreRepository scoreRepository) {
@@ -109,34 +102,29 @@ public class Config {
     }
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http, JwtFilter jwtFilter) throws Exception {
-        /*http
-                .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/login.html", "/register.html","/score.html", "/transfer.html").permitAll()
-                        .requestMatchers("/auth/**", "/score/**","/transfer/**").permitAll()
-                        .anyRequest().authenticated()
-                )
-                .httpBasic(Customizer.withDefaults())
-                .csrf(csrf -> csrf.disable());*/
+       http
 
-        http
-                .csrf(csrf -> csrf.disable())
-                .sessionManagement(session -> session
-                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+        .csrf(csrf -> csrf.disable())
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
                 .authorizeHttpRequests(auth -> auth
-                        // Доступ без токена
-                        .requestMatchers("/login.html", "/register.html").permitAll()
+                        // Разрешаем доступ ко всем статическим файлам и HTML-страницам
+                        .requestMatchers("/", "/login.html", "/register.html", "/score.html", "/transfer.html","/profile.html", "/swagger-ui/index.html").permitAll()
+                        .requestMatchers("/css/**", "/js/**", "/images/**", "/favicon.ico").permitAll()
+                        .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
 
-                        // Разрешаем вход через /auth/login и /auth/register
+                        // Разрешаем доступ к API регистрации/логина без токена
                         .requestMatchers("/auth/login", "/auth/register").permitAll()
 
-                        // ВСЁ остальное в /auth/** — только по токену
-                        .requestMatchers("/auth/**").authenticated()
+                        // Все остальные API требуют токена
+                        .requestMatchers("/scores/**", "/transfers/**").authenticated()
 
-                        // Все прочие запросы требуют аутентификации
+                        // Остальные запросы тоже требуют аутентификации
                         .anyRequest().authenticated());
 
 
         return http.build();
     }
+
+
 }
