@@ -14,6 +14,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.security.Principal;
 import java.util.List;
 
 @RestController
@@ -58,7 +59,7 @@ public class ScoreController {
 
         scoreService.openScore(userId, score.getBalance());
         log.info("Счёт успешно открыт для пользователя: {}", userId);
-        return ResponseEntity.ok("Счёт открыт");
+        return ResponseEntity.ok(score.getScoreNumber());
     }
 
     // === Получение списка счетов (через токен) ===
@@ -82,6 +83,7 @@ public class ScoreController {
         log.info("Получено {} счетов для пользователя: {}", scores.size(), userId);
         return scores;
     }
+
 
     // === Закрытие счёта (с проверкой прав) ===
     @PostMapping("/close")
@@ -123,4 +125,5 @@ public class ScoreController {
             throw new IllegalArgumentException("Неверный токен");
         }
     }
+
 }
